@@ -85,7 +85,7 @@
 - id
 - commit : 이력을 보기 위한 상속 구조
     
-  <img src='/Untitled 1.png'></img>
+  <img src='Untitled 1.png'></img>
     
     - commit object 4대 원소
         - commit : meta data와 tree에 대한 pointer
@@ -95,7 +95,7 @@
 
 **3-2) Git Data Transport Commands**
 
-<img src='/Untitled 2.png'></img>
+<img src='Untitled 2.png'></img>
 
 - index : 읽기/쓰기/조회 속도 boost
 - workspace / local repository / remote repository 구분 이유 = 분산 저장 이유(commit과 push로 나뉘는 이유)
@@ -228,10 +228,11 @@
         - aws 의존적 파이브라인
 
 ---
-
-- **취업 특강**
+<details>
+<summary> 취업특강 </summary>
+<div markdown="1">
     
-    **wanted**
+    wanted
     
     - cloud engineer
     - devops engineer
@@ -254,7 +255,7 @@
     
     ex) 두나두
     
-    <img src='/Untitled 3.png'></img>
+    <img src='Untitled 3.png'></img>
     
     → 추상적으로 설명한 것은 팀을 현재 빌딩하거나 처음 뽑는다고 생각
     
@@ -262,19 +263,19 @@
     
     ex) 화해
     
-   <img src='/Untitled 4.png'></img>
+   <img src='Untitled 4.png'></img>
     
     우대사항이 많은 회사일 경우 우대사항 중 하나만 해봤을 경우 신입이 들어갈 확률이 높다. 
     
     ex) 현대캐피탈
     
-    <img src='/Untitled 5.png'></img>
+    <img src='Untitled 5.png'></img>
     
     불명확하거나 포지션이 일관되지 않으면 지원하지 않는 것이 좋다.
     
     ex) 롯데헬스케어
     
-   <img src='/Untitled 6.png'></img>
+   <img src='Untitled 6.png'></img>
     
     - 5년 이상의 경험 : 해당하지 않아도 되지만, 그만큼 잘해야한다는 것
         - 5년 이상 : 뭔가를 같이 고민할 수 있을 만하나 레벨(주니어 레벨)
@@ -286,7 +287,7 @@
         신입은 devops eng 합격률이 더 높다.
         
     
-    **이력서 & 자소서**
+    이력서 & 자소서
     
     1. 전공, 비전공인지 중요하지 x → 블라인드 상태로 넘어옴
         
@@ -306,7 +307,7 @@
         
         
     
-    **온라인코딩테스트**
+    온라인코딩테스트
     
     - 프로그래머스
     - 백준 → 코테 공부 다하고 시간이 남아서 심심할 때 푸는 것. (모의고사처럼 사용할 것이냐? X)
@@ -323,15 +324,15 @@
             - 하루에 1시간 정도씩만 코테를 풀어라. (하루에 3문제)
             
     
-    **CS**
+    CS
     
     - os는 면접가기 직전에 봐도 됨.
     - 중요한 건 네트워크랑 웹 브라우저(웹 동작 과정을 많이 물어봄)
         - 웹 브라우저에서 url을 입력하고 첫 화면이 출력되기까지 어떤 과정을 거치는가?
         
     
-    **포트폴리오/자격증**
-    
+    포트폴리오/자격증
+
     - 면접관이 나에게 바라는 것을 적는 것
         
         어떤 기술을 사용하여서 프로젝트를 진행했고, 어떤 라이브러리를 썼고, 어떤 문제점이 있었으며, 다음에 어떤 기대효과(?)가 있을 거라고 생각하는지?를 적어야한다.
@@ -342,3 +343,5 @@
         
         - si업계의 경우에는 정처기가 가산점이 된다.
         - 다른 업계에서는 큰 도움이 안된다.
+</div>
+</details>
