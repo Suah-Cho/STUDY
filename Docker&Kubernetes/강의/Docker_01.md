@@ -48,7 +48,7 @@
 
 **가상 머신의 문제점**
 
-![Untitled](docker01_1.png)
+![Untitled](docker01/docker01_1.png)
 
 클라우스 서비스 : 가상화 기술을 이용하여 서버를 임대해주는 서비스
 
@@ -77,13 +77,13 @@
 
 - 유니온 파일 시스템 형식(aufs, btrfs, devicemapper)
     
-    ![Untitled](docker01_2.png)
+    ![Untitled](docker01/docker01_2.png)
     
-    ![Untitled](docker01_3.png)
+    ![Untitled](docker01/docker01_3.png)
     
 - 각 이미지는 의존 관계를 형성한다.
     
-    ![Untitled](docker01_4.png)
+    ![Untitled](docker01/docker01_4.png)
     
 
 **클라우드 환경**
@@ -123,7 +123,7 @@
 
 **도커 구성 요소**
 
-![[https://docs.docker.com/get-started/overview/#docker-architecture](https://docs.docker.com/get-started/overview/#docker-architecture)](docker_01%20175bcf43ea934c2c94aaef17fece9dc4/Untitled%204.png)
+![Untitled](docker01/docker01_5.png)
 
 [https://docs.docker.com/get-started/overview/#docker-architecture](https://docs.docker.com/get-started/overview/#docker-architecture)
 
@@ -165,6 +165,6 @@
 
 **도커 컨테이너 라이프사이클**
 
-![Untitled](docker01_6.png)
+![Untitled](docker01/docker01_6.png)
 
-![Untitled](docker01_7.png)
+![Untitled](docker01/docker01_7.png)
