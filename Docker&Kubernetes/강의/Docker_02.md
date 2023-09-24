@@ -4,7 +4,7 @@
 
 ### Dockerfile을 이용한 도커 이미지 빌드
 
-![Untitled](docker_02/docker02_8.png)
+![Untitled](docker02/docker02_8.png)
 
 **Dokerfile [Link](https://docs.docker.com/engine/reference/builder/)**
 
@@ -70,13 +70,13 @@
     
     - [http://localhost:8080/](http://localhost:8080/) 으로 접속
     
-    ![Untitled](docker_02/docker02_1.png)
+    ![Untitled](docker02/docker02_1.png)
     
     ```bash
     curl http://localhost:8080
     ```
     
-   ![Untitled](docker_02/docker02_2.png)
+   ![Untitled](docker02/docker02_2.png)
     
     - Dockerfile 작성
     
@@ -99,7 +99,7 @@
     - CMD
         - 컨테이너 실행 시 실행할 명령어 → go run /echo/main.go
     
-   ![Untitled](docker_02/docker02_3.png)
+   ![Untitled](docker02/docker02_3.png)
     
     - 도커 이미지 빌드 및 확인
     
@@ -155,7 +155,7 @@
      => => naming to docker.io/exmaple/echo:latest                                                                     0.0s
     ```
     
-   ![Untitled](docker_02/docker02_4.png)
+   ![Untitled](docker02/docker02_4.png)
     
     ```bash
     docker image ls (= docker images)
@@ -165,9 +165,9 @@
     ubuntu         latest    c6b84b685f35   5 weeks ago          77.8MB
     ```
     
-    ![Untitled](docker_02/docker02_5.png)
+    ![Untitled](docker02/docker02_5.png)
     
-    ![Untitled](docker_02/docker02_6.png)
+    ![Untitled](docker02/docker02_6.png)
     
 
 **dangling image**
@@ -376,7 +376,7 @@ docker container run --help
 -v, --volume list                    Bind mount a volume
 ```
 
-![Untitled](docker_02/docker02_7.png)
+![Untitled](docker02/docker02_7.png)
 
 `image는 -t 옵션이 없으면 에러나지만, container은 --name 옵션이 없어도 된다. 즉, image는 이름이 필수지만, container은 없어도 된다.`
 
