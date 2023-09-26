@@ -262,38 +262,64 @@ VOLUME /home/share
 ```powershell
 docker image build -t myvolume:2.0 .
 
-mkdir data // 볼륨 맵핑에 사용할 디렉터리 생성
+docker container run -it --rm myvolume:2.0 /bin/bash
+root@aa641a6949c4:/# echo test >> /home/share/test
+root@aa641a6949c4:/# ls /home/share
+test  testfile
+root@aa641a6949c4: ctrl p q
 
-root@303a8fe37b8b:/# ls /home/share
-root@303a8fe37b8b:/# echo test2 >> /home/share/test2
-root@303a8fe37b8b:/# ls /home/share
-test2
-root@303a8fe37b8b:/# mkdir /home/share/tmp
-root@303a8fe37b8b:/# ls -l /home/share
-total 0
--rw-r--r-- 1 root root    6 Sep 25 03:08 test2
-drwxr-xr-x 1 root root 4096 Sep 25 03:09 tmp
-root@303a8fe37b8b:/# exit
-exit
+docker volume ls
+local     b0560b9d5940b7989dcc2c523238917262795f493a4d00d3678ef564567715fb
 
-dir data
-C 드라이브의 볼륨에는 이름이 없습니다.
- 볼륨 일련 번호: D0A5-3978
-
- C:\docker\volume\data 디렉터리
-
-2023-09-25  오후 12:09    <DIR>          .
-2023-09-25  오후 12:09    <DIR>          ..
-2023-09-25  오후 12:08                 6 test2
-2023-09-25  오후 12:09    <DIR>          tmp
-               1개 파일                   6 바이트
-               3개 디렉터리  123,220,983,808 바이트 남음
-
-// 새로운 컨테이너 생성
-docker container run -it --rm -v c:\docker\volume\data\:/home/share/ myvolume:2.0 /bin/bash
-root@97938e633911:/# ls /home/share
-test2  tmp  // 동일한 파일이 들어있다.
+docker container inspect -f "{{.Mounts}}" aa641
+[{volume b0560b9d5940b7989dcc2c523238917262795f493a4d00d3678ef564567715fb /var/lib/docker/volumes/b0560b9d5940b7989dcc2c523238917262795f493a4d00d3678ef564567715fb/_data /home/share local  true }]
 ```
+```powershell
+cd \\wsl.localhost\docker-desktop-data\data\docker\volumes\b0560b9d5940b7989dcc2c523238917262795f493a4d00d3678ef564567715fb/_data
+PS Microsoft.PowerShell.Core\FileSystem::\\wsl.localhost\docker-desktop-data\data\docker\volumes\b0560b9d5940b7989dcc2c5
+
+dir
+디렉터리: \\wsl.localhost\docker-desktop-data\data\docker\volumes\b0560b9d5940b7989dcc2c523238917262795f493a4d00d36
+    78ef564567715fb\_data
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+------      2023-09-26   오전 8:31              5 test
+------      2023-09-25  오후 12:45              5 testfile
+
+// 호스트에 저장된 볼륨 데이터를 확인할 수 있다.
+
+docker container stop aa6
+aa6
+
+docker volume ls
+DRIVER    VOLUME NAME    // 컨테이너가 삭제되면 볼륨도 함께 삭제된다.
+```
+<details>
+<summary>Volume 추가 설명</summary>
+<div markdown="1">
+    
+- volume을 지정하면 도커가 일부 폴더와 경로를 호스트 머신에 설정  
+    - volume에는 두 가지 타입이 있다.  
+    - volume에 액세스할 수 있는 방법  
+- docker volume 명령어  
+    - 파일 시스템을 뒤져서 찾을 수 있지만, 비추천  
+    - volume을 사용하는 목적은 컨테이너 간의 데이터 공유  
+    - 호스트와 컨테이너 간의 데이터 공유가 목적이 아니다!  
+![image](https://github.com/Suah-Cho/STUDY/assets/102336763/0cb24c14-930f-4ea0-971e-2e7ebe37a866)
+- Volume 타입  
+    - Anonymous Volumes(익명 볼륨)  
+        - Dockefile 작성할 때 VOLUME 명령어로 지정  
+        - 컨테이너가 실행되는 동안에만 존재 → 삭제되면 볼륨도 사라진다.  
+    - Named Volumes(명명된 볼륨)  
+        - docker run -v, —volume 옵션으로 지정  
+        - 컨테이너가 종료된 후에도 볼륨이 유지된다.  
+        - 영구적 목적의 데이터나, 편집 & 직접 볼 필요 없는 데이터에 적합  
+        - 컨테이너를 종료해도 docker volume하면 데이터가 존재  
+        - 새로운 컨테이너를 시작하고, -v 옵션으로 볼륨에 맵핑하면 데이터 사용 가능  
+</div> 
+</details>
 
 ### 컨테이너 관련 명령어
 
