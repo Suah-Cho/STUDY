@@ -1,18 +1,4 @@
-## 모놀리식 아키텍처 vs 마이크로서비스 아키텍처
-![image](https://github.com/Suah-Cho/STUDY/assets/102336763/cdb5884c-0bd7-4a70-ac0f-8b64ff2f86db)
-
-### 모놀리식 아키텍처(Monolithic Architecture, MA)란?
-하나의 서비스 또는 애플리케이션이 `하나의 거대한 아키텍처`를 가지는 경우, 이를 모놀리식(Monolithic) 아키텍처라고 한다.
-
-**모놀리식 아키텍처 장단점**
-|장점|단점|
-|---|---|
-|- End-to-End 테스트가 용이하다.<br>  애플리케이션이 하나의 아키텍처로 이루어져있어 테스트가 용이하다.<br> - 빠르게 간단한 서비스를 만들 수 있다.|- 조그만한 수정사항이 있어도 전체를 다시 빌드하고 배포해야한다.<br> - 유지보수가 힘들다. <br> - 프로젝트 규모가 커질수록 구동 시간이 늘어난다. <br> - 일부분의 오류가 전체에 영향을 미친다. <br> - 각 기능별로 알맞은 언어나 프레임워크를 선택하기가 까다롭다.|
-
-### 마이크로 서비스 아키텍처(Microservice Architecture, MSA)란?
-'마이크로 서비스 아키텍처(MSA)'란 하나의 큰 애플리케이션을 `여러 개의 작은 애플리케이션으로 쪼개어 변경과 조합이 가능`하도록 만든 아키텍처를 이야기한다.
-
-**마이크로 서비스 아키텍처의 장단점**
-|장점|단점|
-|---|---|
-|- 유지보스가 용이함<br> - 거대한 서비스도 빠르게 수정 가능<br>- 각 기능에 따라 다른 언어를 선택할 수 있다.|- 모니터링 및 테스트가 힘들다.<br> - End-to-End 서비스 구동이 불편<br> - 서비스 간 호출시 API를 사용하기 때문에 통신 비용이나 Latency가 그만큼 증가한다.|
+## MSA(Microservices Architecture)
+- [`모놀리식 아키텍처와 마이크로서비스 아키텍처`](https://github.com/Suah-Cho/STUDY/blob/master/MSA/0.%20%EB%AA%A8%EB%86%80%EB%A6%AC%EC%8B%9D%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98%EC%99%80%20%EB%A7%88%EC%9D%B4%ED%81%AC%EB%A1%9C%EC%84%9C%EB%B9%84%EC%8A%A4%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98.md)  
+- [`MSA 개요`](https://github.com/Suah-Cho/STUDY/blob/master/MSA/1.%20MSA.md)  
+- [`마이크로서비스 아키텍처의 기본`](https://github.com/Suah-Cho/STUDY/blob/master/MSA/2.%20%EB%A7%88%EC%9D%B4%ED%81%AC%EB%A1%9C%EC%84%9C%EB%B9%84%EC%8A%A4%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98%EC%9D%98%20%EA%B8%B0%EB%B3%B8.md)  
