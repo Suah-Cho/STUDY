@@ -507,3 +507,256 @@ replicaset-nginx-nvbf8   1/1     Running   0          2m47s  **// 하나의 파�
         vagrant@master-node:~$ kubectl get pod --show-labels
         No resources found in default namespace.
         ```
+        
+
+### 디플로이먼트(Deployment)
+
+- 레플리카셋, 파드의 배포를 관리
+- 애플리케이션의 **배포와 업데이트**를 편하게 하기 위해서 사용
+- 쿠버네티스에서 **상태가 없는 (stateless) 애플리케이션을 배포**할 때 사용하는 가장 기본적인 컨트롤러
+    - 상태가 있는 애플리케이션 → 데이터베이스
+- 디플로이먼트는 스케일, 롤아웃, 롤백, 자동복구 기능이 있다.
+    - 스케일
+        - 파드의 개수를 늘리거나 줄일 수 있다.
+    - 롤아웃, 롤백
+        - 서비스를 유지하면서 파드를 교체
+    - 자동 복구
+        - 노드 수준에서 장애가 발생했을 때 파드를 복구하는 것이 가능
+
+**디플로이먼트 생성 및 삭제**
+
+https://kubernetes.io/ko/docs/concepts/workloads/controllers/deployment/
+
+1. 디플로이먼 생성
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-nginx-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-nginx
+  template:
+    metadata: 
+      name: my-nginx-pod
+      labels:
+        app: my-nginx
+    spec:
+      containers:
+      - name: nginx
+        image: docker.io/nginx
+        ports:
+        - containerPort: 80
+      imagePullSecrets:
+      - name: regcred
+```
+
+1. 디플로이먼트, 레플리카셋, 파드 생성을 확인
+
+```bash
+vagrant@master-node:~$ kubectl apply -f deployment-nginx.yaml
+deployment.apps/my-nginx-deployment created
+```
+
+```bash
+vagrant@master-node:~$ kubectl get deployments,replicasets,pods
+NAME                                  READY   UP-TO-DATE   AVAILABLE   AGE
+**deployment.apps/my-nginx-deployment   3/3     3            3           46s
+                                     ~~~~~   ~~~~~~~~~~   ~~~~~~~~~   ~~~~
+                                     |       |            |           +--  파드가 실행되고 있는 지속 시간
+                                     |       |            +-- 서비스 가능한 파드의 개수 
+                                     |       +-- 최신 상태로 업데이트된 파드의 개수  
+                                     +-- 파드의 개수**
+
+NAME                                             DESIRED   CURRENT   READY   AGE
+replicaset.apps/my-nginx-deployment-66bcdb4565   3         3         3       46s
+
+NAME                                       READY   STATUS    RESTARTS   AGE
+pod/my-nginx-deployment-66bcdb4565-q4cvt   1/1     Running   0          46s
+pod/my-nginx-deployment-66bcdb4565-rmj4h   1/1     Running   0          46s
+pod/my-nginx-deployment-66bcdb4565-z2vwb   1/1     Running   0          46s
+```
+
+1. 디플로이먼트를 삭제 → 레플리카셋, 파드 또한 함께 삭제되는 것을 확인
+
+```bash
+vagrant@master-node:~$ kubectl delete deployment my-nginx-deployment
+deployment.apps "my-nginx-deployment" deleted
+
+vagrant@master-node:~$ kubectl get deployments,replicasets,pods
+No resources found in default namespace.
+```
+
+**디플로이먼트를 사용하는 이유**
+
+1. **스케일**
+    - 레플리카의 값을 변경해서 파드의 개수를 조절 → 처리 능력을 높이고 낮추는 기능
+    - 파드이 개수를 늘리는 중에 쿠버네티스 클러스터의 자원(CPU, 메모리, …)이 부족해지면 노드를 추가하여 자원이 생길 때까지 파드 생성을 보류
+    1. 레플리카 값을 3으로 설정해서 디플로이먼트를 생성
+    
+    web-deploy-replicas-3.yaml
+    
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: web-deply
+    spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: web
+      template:
+        metadata: 
+          labels:
+            app: web
+        spec:
+          containers:
+          - name: nginx
+            image: docker.io/nginx
+            ports:
+            - containerPort: 80
+          imagePullSecrets:
+          - name: regcred
+    ```
+    
+    ```yaml
+    vagrant@master-node:~$ kubectl apply -f web-deploy-replicas-3.yaml
+    deployment.apps/web-deply created
+    
+    vagrant@master-node:~$ kubectl get deploy,rs,po -o wide
+    NAME                        READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES            SELECTOR
+    deployment.apps/web-deply   3/3     3            3           49s   nginx        docker.io/nginx   app=web
+    
+    NAME                                   DESIRED   CURRENT   READY   AGE   CONTAINERS   IMAGES            SELECTOR
+    replicaset.apps/web-deply-6dc9946879   3         3         3       49s   nginx        docker.io/nginx   app=web,pod-template-hash=6dc9946879
+    
+    NAME                             READY   STATUS    RESTARTS   AGE   IP              NODE            NOMINATED NODE   READINESS GATES
+    pod/web-deply-6dc9946879-65st9   1/1     Running   0          49s   172.16.158.16   worker-node02   <none>           <none>
+    pod/web-deply-6dc9946879-8z2k6   1/1     Running   0          49s   172.16.158.15   worker-node02   <none>           <none>
+    pod/web-deply-6dc9946879-pqdms   1/1     Running   0          49s   172.16.87.203   worker-node01   <none>           <none>
+    ```
+    
+    1. 레플리카 값을 5로 변경해서 적용
+    
+    ```bash
+    vagrant@master-node:~$ cp web-deploy-replicas-3.yaml web-deploy-replicas-5.yaml
+    ```
+    
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: web-deply
+    spec:
+      replicas: 5
+      selector:
+        matchLabels:
+          app: web
+      template:
+        metadata: 
+          labels:
+            app: web
+        spec:
+          containers:
+          - name: nginx
+            image: docker.io/nginx
+            ports:
+            - containerPort: 80
+          imagePullSecrets:
+          - name: regcred
+    ```
+    
+    ```bash
+    vagrant@master-node:~$ kubectl apply -f web-deploy-replicas-5.yaml
+    deployment.apps/web-deply configured
+    
+    vagrant@master-node:~$ kubectl get deploy,rs,po -o wide
+    NAME                        READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS   IMAGES            SELECTOR
+    deployment.apps/web-deply   5/5     5            5           3m12s   nginx        docker.io/nginx   app=web
+    
+    NAME                                   DESIRED   CURRENT   READY   AGE     CONTAINERS   IMAGES            SELECTOR
+    replicaset.apps/web-deply-6dc9946879   5         5         5       3m12s   nginx        docker.io/nginx   app=web,pod-template-hash=6dc9946879
+    
+    NAME                             READY   STATUS    RESTARTS   AGE     IP              NODE            NOMINATED NODE   READINESS GATES
+    pod/web-deply-6dc9946879-65st9   1/1     Running   0          3m12s   172.16.158.16   worker-node02   <none>           <none>
+    **pod/web-deply-6dc9946879-7ff9b   1/1     Running   0          33s     172.16.87.204   worker-node01   <none>           <none>
+    pod/web-deply-6dc9946879-8gd52   1/1     Running   0          33s     172.16.158.17   worker-node02   <none>           <none>**
+    pod/web-deply-6dc9946879-8z2k6   1/1     Running   0          3m12s   172.16.158.15   worker-node02   <none>           <none>
+    pod/web-deply-6dc9946879-pqdms   1/1     Running   0          3m12s   172.16.87.203   worker-node01   <none>           <none>
+    ```
+    
+    1. kubectl scale 명령으로 레플리카 값을 변경
+    
+    ```bash
+    vagrant@master-node:~$ kubectl scale deployments web-deply --replicas=10
+    deployment.apps/web-deply scaled
+    
+    vagrant@master-node:~$ kubectl scale deployments web-deply --replicas=10
+    deployment.apps/web-deply scaled
+    vagrant@master-node:~$ kubectl get deploy,rs,po -o wide
+    
+    NAME                        READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS   IMAGES            SELECTOR
+    deployment.apps/web-deply   10/10   10           10          5m24s   nginx        docker.io/nginx   app=web
+    
+    NAME                                   DESIRED   CURRENT   READY   AGE     CONTAINERS   IMAGES            SELECTOR
+    replicaset.apps/web-deply-6dc9946879   10        10        10      5m24s   nginx        docker.io/nginx   app=web,pod-template-hash=6dc9946879
+    
+    NAME                             READY   STATUS    RESTARTS   AGE     IP              NODE            NOMINATED NODE   READINESS GATES
+    pod/web-deply-6dc9946879-65st9   1/1     Running   0          5m24s   172.16.158.16   worker-node02   <none>           <none>
+    pod/web-deply-6dc9946879-7ff9b   1/1     Running   0          2m45s   172.16.87.204   worker-node01   <none>           <none>
+    pod/web-deply-6dc9946879-8gd52   1/1     Running   0          2m45s   172.16.158.17   worker-node02   <none>           <none>
+    pod/web-deply-6dc9946879-8z2k6   1/1     Running   0          5m24s   172.16.158.15   worker-node02   <none>           <none>
+    **pod/web-deply-6dc9946879-fvd82   1/1     Running   0          13s     172.16.87.206   worker-node01   <none>           <none>
+    pod/web-deply-6dc9946879-jsst8   1/1     Running   0          13s     172.16.87.205   worker-node01   <none>           <none>**
+    pod/web-deply-6dc9946879-pqdms   1/1     Running   0          5m24s   172.16.87.203   worker-node01   <none>           <none>
+    **pod/web-deply-6dc9946879-vgww4   1/1     Running   0          13s     172.16.87.207   worker-node01   <none>           <none>
+    pod/web-deply-6dc9946879-vw9v2   1/1     Running   0          13s     172.16.158.18   worker-node02   <none>           <none>
+    pod/web-deply-6dc9946879-xg87j   1/1     Running   0          13s     172.16.158.19   worker-node02   <none>           <none>**
+    ```
+    
+2. **롤아웃, 롤백**
+- 애플리케이션을 업데이터할 때 레플리카셋의 변경 사항을 저장하는 `리비전(revision)을 남겨서 롤백을 가능`하게 해주고, 무중단 서비스를 위해 `파드의 롤링 업데이터 전략을 지정`할 수 있다.
+    1. —record옵션을 추가해 디플로이먼트를 생성
+    
+    ```bash
+    vagrant@master-node:~$ kubectl apply -f deployment-nginx.yaml --record
+    Flag --record has been deprecated, --record will be removed in the future
+    deployment.apps/my-nginx-deployment created
+    
+    vagrant@master-node:~$ kubectl get deploy,rs,po -o wide
+    NAME                                  READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES            SELECTOR
+    deployment.apps/my-nginx-deployment   3/3     3            3           32s   nginx        docker.io/nginx   app=my-nginx
+    
+    NAME                                             DESIRED   CURRENT   READY   AGE   CONTAINERS   IMAGES            SELECTOR
+    replicaset.apps/my-nginx-deployment-66bcdb4565   3         3         3       32s   nginx        docker.io/nginx   app=my-nginx,pod-template-hash=66bcdb4565
+    
+    NAME                                       READY   STATUS    RESTARTS   AGE   IP              NODE            NOMINATED NODE   READINESS GATES
+    pod/my-nginx-deployment-66bcdb4565-jlk26   1/1     Running   0          32s   172.16.87.208   worker-node01   <none>           <none>
+    pod/my-nginx-deployment-66bcdb4565-kqgvs   1/1     Running   0          32s   172.16.158.20   worker-node02   <none>           <none>
+    pod/my-nginx-deployment-66bcdb4565-sjpc7   1/1     Running   0          32s   172.16.158.21   worker-node02   <none>           <none>
+    ```
+    
+    1. **kubectl set image 명령으로 파드의 이미지를 변경**
+    
+    ```bash
+    vagrant@master-node:~$ kubectl set image deployments my-nginx-deployment nginx=nginx:1.11 --record
+    Flag --record has been deprecated, --record will be removed in the future
+    deployment.apps/my-nginx-deployment image updated
+    
+    vagrant@master-node:~$ kubectl get deploy,rs,po -o wide
+    NAME                                  READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS   IMAGES       SELECTOR
+    deployment.apps/my-nginx-deployment   3/3     3            3           3m19s   nginx        nginx:1.11   app=my-nginx
+    
+    NAME                                             DESIRED   CURRENT   READY   AGE     CONTAINERS   IMAGES            SELECTOR
+    replicaset.apps/my-nginx-deployment-57488f8967   3         3         3       77s     nginx        nginx:1.11        app=my-nginx,pod-template-hash=57488f8967
+    replicaset.apps/my-nginx-deployment-66bcdb4565   0         0         0       3m19s   nginx        docker.io/nginx   app=my-nginx,pod-template-hash=66bcdb4565
+    
+    NAME                                       READY   STATUS    RESTARTS   AGE   IP              NODE            NOMINATED NODE   READINESS GATES
+    pod/my-nginx-deployment-57488f8967-46b6v   1/1     Running   0          13s   172.16.158.23   worker-node02   <none>           <none>
+    pod/my-nginx-deployment-57488f8967-gkkhd   1/1     Running   0          47s   172.16.158.22   worker-node02   <none>           <none>
+    pod/my-nginx-deployment-57488f8967-kjqsf   1/1     Running   0          76s   172.16.87.209   worker-node01   <none>           <none>
+    ```
