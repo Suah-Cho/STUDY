@@ -542,7 +542,7 @@ No resources found in default namespace.
   service/kubernetes   ClusterIP   172.17.0.1   <none>        443/TCP   4d1h
   ```
 
-### 디플로이먼트 배포 전략
+## 디플로이먼트 배포 전략
 <details>
   <summary> [참고자료](https://dev.classmethod.jp/articles/ci-cd-deployment-strategies-kr/) </summary>
   <div markdown="1">
@@ -569,7 +569,7 @@ No resources found in default namespace.
   </div>
 </details>
     
-**Recreate(재생성)**
+### Recreate(재생성)
 
 ```yaml
 apiVersion: apps/v1
@@ -633,7 +633,7 @@ sample-deployment-recreate-77dc8d9fb   3         3         2       21s
 sample-deployment-recreate-77dc8d9fb   3         3         3       23s   **// 새로운 RS을 서비스**
 ```
 
-**RollingUpdate**
+### RollingUpdate
 
 sample-deployment-rollingupdate.yaml
 
@@ -778,6 +778,534 @@ sample-deployment-rollingupdate-9ff76c956   0         0         0       92s
     
     ![image](https://github.com/Suah-Cho/STUDY/assets/102336763/00cd6cc3-e3ea-4ff2-ab22-cb6d1f638544)
 
+    ### Blue/Green 업데이트 실습
+    
+    **디플로이먼트 전략에서 제공하는 것이 아니고 service를 이용해서 구현**
+    
+    **1. BLUE 디플로이먼트를 생성**
+    
+    sample-deployment.yaml
+    
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: sample-deployment-blue
+    spec:
+      selector:
+        matchLabels:
+          app: blue-green-deployment
+          version: v1.16
+      replicas: 3
+      template:
+        metadata:
+          labels:
+            app: blue-green-deployment
+            version: v1.16
+        spec:
+          containers:
+          - name: mywebserver
+            image: docker.io/alicek106/rr-test:echo-hostname
+          imagePullSecrets:
+          - name: regcred
+    ```
+    
+    ```bash
+    vagrant@master-node:~$ kubectl apply -f sample-deployment.yaml
+    deployment.apps/sample-deployment-blue created
+    vagrant@master-node:~$ kubectl get pod --show-labels
+    NAME                                      READY   STATUS    RESTARTS   AGE   LABELS
+    sample-deployment-blue-58bc49f974-dv2s7   1/1     Running   0          17s   app=blue-green-deployment,pod-template-hash=58bc49f974,version=v1.16
+    sample-deployment-blue-58bc49f974-x9tbv   1/1     Running   0          17s   app=blue-green-deployment,pod-template-hash=58bc49f974,version=v1.16
+    sample-deployment-blue-58bc49f974-zst78   1/1     Running   0          17s   app=blue-green-deployment,pod-template-hash=58bc49f974,version=v1.16
+    ```
+    
+    **2. 서비스 생성**
+    
+    sample-service-nodeport.yaml
+    
+    ```yaml
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: blue-green-service
+    spec:
+      type: NodePort
+      ports:
+      - name: http
+        port: 8080
+        targetPort: 80
+      selector:
+        app: blue-green-deployment
+        version: v1.16
+    ```
+    
+    ```bash
+    vagrant@master-node:~$ kubectl apply -f sample-service-nodeport.yaml
+    service/blue-green-service created
+    vagrant@master-node:~$ kubectl get service
+    NAME                 TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)          AGE
+    blue-green-service   NodePort    172.17.3.75   <none>        8080:30168/TCP   6s
+    kubernetes           ClusterIP   172.17.0.1    <none>        443/TCP          6d1h
+    ```
+    
+    **노드 포트로 서비스 동작을 확인**
+    
+    마스터 노드에서 접근
+    
+    ```bash
+    vagrant@master-node:~$ wget -q -O - http://10.0.0.10:30168 | grep Hello
+            <p>Hello,  sample-deployment-blue-58bc49f974-x9tbv</p>  </blockquote>
+    vagrant@master-node:~$ wget -q -O - http://10.0.0.10:30168 | grep Hello
+            <p>Hello,  sample-deployment-blue-58bc49f974-zst78</p>  </blockquote>
+    vagrant@master-node:~$ wget -q -O - http://10.0.0.10:30168 | grep Hello
+            <p>Hello,  sample-deployment-blue-58bc49f974-dv2s7</p>  </blockquote>
+    ```
+    
+    클러스터 외부(내 pc)에서 접근
+    
+    ![image](https://github.com/Suah-Cho/STUDY/assets/102336763/d3052625-e47e-4687-b15d-ed5a99e79841)
+
+    
+    ![image](https://github.com/Suah-Cho/STUDY/assets/102336763/80b7237b-a834-48be-93fa-b89df5a30a1b)
+
+    
+    cf) CLUSTER-IP와 PORT로 접근
+    
+    ```bash
+    vagrant@master-node:~$ wget -q -O - http://172.17.3.75:8080 | grep Hello
+            <p>Hello,  sample-deployment-blue-58bc49f974-zst78</p>  </blockquote>
+    ```
+    
+    **4. GREEN 디플로이먼트를 생성**
+    
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: sample-deployment-green
+    spec:
+      selector:
+        matchLabels:
+          app: blue-green-deployment
+          version: v1.17
+      replicas: 3
+      template:
+        metadata:
+          labels:
+            app: blue-green-deployment
+            version: v1.17
+        spec:
+          containers:
+          - name: mywebserver
+            image: docker.io/alicek106/rr-test:echo-hostname
+          imagePullSecrets:
+          - name: regcred
+    ```
+    
+    ```bash
+    vagrant@master-node:~$ kubectl apply -f sample-deployment-green.yaml
+    deployment.apps/sample-deployment-green created
+    
+    vagrant@master-node:~$ kubectl get pod
+    NAME                                       READY   STATUS    RESTARTS   AGE
+    sample-deployment-blue-58bc49f974-dv2s7    1/1     Running   0          13m
+    sample-deployment-blue-58bc49f974-x9tbv    1/1     Running   0          13m
+    sample-deployment-blue-58bc49f974-zst78    1/1     Running   0          13m
+    sample-deployment-green-5c7657d76f-g8w5w   1/1     Running   0          5s
+    sample-deployment-green-5c7657d76f-lbvwm   1/1     Running   0          5s
+    sample-deployment-green-5c7657d76f-trj9d   1/1     Running   0          5s
+    
+    vagrant@master-node:~$ kubectl get pod -o wide
+    NAME                                       READY   STATUS    RESTARTS   AGE   IP              NODE            NOMINATED NODE   READINESS GATES
+    sample-deployment-blue-58bc49f974-dv2s7    1/1     Running   0          15m   172.16.87.216   worker-node01   <none>           <none>
+    sample-deployment-blue-58bc49f974-x9tbv    1/1     Running   0          15m   172.16.87.217   worker-node01   <none>           <none>
+    sample-deployment-blue-58bc49f974-zst78    1/1     Running   0          15m   172.16.158.49   worker-node02   <none>           <none>
+    sample-deployment-green-5c7657d76f-g8w5w   1/1     Running   0          96s   172.16.87.218   worker-node01   <none>           <none>
+    sample-deployment-green-5c7657d76f-lbvwm   1/1     Running   0          96s   172.16.158.53   worker-node02   <none>           <none>
+    sample-deployment-green-5c7657d76f-trj9d   1/1     Running   0          96s   172.16.158.52   worker-node02   <none>           <none>
+    ```
+    
+    두 가지 버전의 애플리케이션이 함께 실행되고 있으며, BLUE버전은 NodePort 서비스를 통해서 외부에 노출되어 있고, GREEN버전은 내부에서만 접근이 가능
+    
+    **5. BLUE버전에서 GREEN버전으로 서비스 대상을 변경**
+    
+    sample-service-nodeport.yaml 수정
+    
+    ```yaml
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: blue-green-service
+    spec:
+      type: NodePort
+      ports:
+      - name: http
+        port: 8080
+        targetPort: 80
+      selector:
+        app: blue-green-deployment
+        version: v1.17
+    ```
+    
+    ```bash
+    vagrant@master-node:~$ kubectl apply -f sample-service-nodeport.yaml
+    service/blue-green-service configured
+    ```
+    
+    ```yaml
+    vagrant@master-node:~$ kubectl get service
+    NAME                 TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)          AGE
+    blue-green-service   NodePort    172.17.3.75   <none>        8080:**30168**/TCP   16m  // 서비스의 공개 포트가 그대로 유지
+    kubernetes           ClusterIP   172.17.0.1    <none>        443/TCP          6d1h
+    ```
+    
+    **노드 IP와 PORT로 서비스를 확인 ⇒ GREEN 버전의 애플리케이션이 응답하는 것을 확인**
+    
+    ```bash
+    vagrant@master-node:~$ wget -q -O - http://10.0.0.10:30168 | grep Hello
+            <p>Hello,  sample-deployment-green-5c7657d76f-g8w5w</p> </blockquote>
+    ```
+    
+    ![image](https://github.com/Suah-Cho/STUDY/assets/102336763/8dfdbd01-32ad-4e5f-a9f4-5b89f43feee3)
+
+    
+    ⇒ 클라이언트는 똑같은 방식으로 접근했는데, 백에서 돌고있는 파드가 변경되어 다른 파드가 노출된다.
+    
+    ## Canary 업데이트
+    
+    BLUE/GREEN 업데이트처럼 디플로이먼트 전략에서 제공하는 것이 아니라 Ingress를 이용해 구현
+    
+    **1. MetalLB 설치**
+    
+    ```bash
+    vagrant@master-node:~$ kubectl get configmap kube-proxy -n kube-system -o yaml | \
+    >     sed -e "s/strictARP: false/strictARP: true/" | \
+    >     kubectl apply -f - -n kube-system
+    configmap/kube-proxy configured
+    
+    kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.11/config/manifests/metallb-native.yaml
+    
+    vagrant@master-node:~$ kubectl apply -f routing-config.yaml -n metallb-system
+    ipaddresspool.metallb.io/first-pool created
+    l2advertisement.metallb.io/example created
+    ```
+    
+    **2. nginx ingress controller 설치**
+    
+    ```bash
+    vagrant@master-node:~$ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/baremetal/deploy.yaml
+    
+    vagrant@master-node:~$ kubectl get all -n ingress-nginx
+    NAME                                            READY   STATUS      RESTARTS   AGE
+    pod/ingress-nginx-admission-create-knnh4        0/1     Completed   0          18h
+    pod/ingress-nginx-admission-patch-88p84         0/1     Completed   0          18h
+    pod/ingress-nginx-controller-79bc9f5df8-rbc84   1/1     Running     1          18h
+    
+    NAME                                         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+    service/ingress-nginx-controller             **NodePort**    172.17.39.79    <none>        **80:30253/TCP,443:32407/TCP**   18h
+    service/ingress-nginx-controller-admission   ClusterIP   172.17.48.148   <none>        443/TCP                      18h
+    
+    NAME                                       READY   UP-TO-DATE   AVAILABLE   AGE
+    deployment.apps/ingress-nginx-controller   1/1     1            1           18h
+    
+    NAME                                                  DESIRED   CURRENT   READY   AGE
+    replicaset.apps/ingress-nginx-controller-79bc9f5df8   1         1         1       18h
+    
+    NAME                                       COMPLETIONS   DURATION   AGE
+    job.batch/ingress-nginx-admission-create   1/1           15s        18h
+    job.batch/ingress-nginx-admission-patch    1/1           23s        18h
+    
+    vagrant@master-node:~$ kubectl edit service ingress-nginx-controller -n ingress-nginx
+    type : NodePort  -> LoadBalancer
+    service/ingress-nginx-controller edited
+    
+    vagrant@master-node:~$ kubectl get service -n ingress-nginx
+    NAME                                 TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+    ingress-nginx-controller             **LoadBalancer**   172.17.39.79    10.0.0.30     80:30253/TCP,443:32407/TCP   18h
+    ingress-nginx-controller-admission   ClusterIP      172.17.48.148   <none>        443/TCP                      18h
+    ```
+    
+    **3. 웹 서비스를 제공하는 디플로이먼트, 서비스, 인그레스를 생성**
+    
+    production-deployment.yaml
+    
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: production-deployment
+    spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: nginx
+      template:
+        metadata:
+          labels:
+            app: nginx
+        spec:
+          containers:
+          - name: nginx
+            image: docker.io/nginx:1.14.2
+            ports:
+            - containerPort: 80
+          imagePullSecrets:
+          - name: regcred
+    ```
+    
+    production-service.yaml
+    
+    ```yaml
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: production-service
+    spec:
+      type: ClusterIP
+      selector:
+        app: nginx
+      ports:
+        - protocol: TCP
+          port: 80
+          targetPort: 80
+    ```
+    
+    production-ingress.yaml
+    
+    ```yaml
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: production-ingress
+    spec:
+      ingressClassName: nginx
+      rules:
+      - host: www.canary.com
+        http:
+          paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: production-service
+                port:
+                  number: 80
+    ```
+    
+    ```bash
+    vagrant@master-node:~$ kubectl apply -f production-deployment.yaml
+    deployment.apps/production-deployment created
+    vagrant@master-node:~$ kubectl apply -f production-service.yaml
+    service/production-service created
+    vagrant@master-node:~$ kubectl apply -f production-ingress.yaml
+    ingress.networking.k8s.io/production-ingress created
+    ```
+    
+    ```bash
+    vagrant@master-node:~$ kubectl get pod
+    NAME                                     READY   STATUS    RESTARTS   AGE
+    production-deployment-768d775c57-7xghk   1/1     Running   0          61s
+    production-deployment-768d775c57-vnmdr   1/1     Running   0          61s
+    production-deployment-768d775c57-vxxqg   1/1     Running   0          61s
+    
+    vagrant@master-node:~$ kubectl get service
+    NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+    kubernetes           ClusterIP   172.17.0.1      <none>        443/TCP        6d2h
+    production-service   NodePort    172.17.20.176   <none>        80:31792/TCP   57s
+    
+    vagrant@master-node:~$ kubectl get ingress
+    NAME                 CLASS   HOSTS            ADDRESS     PORTS   AGE
+    production-ingress   nginx   www.canary.com   10.0.0.12   80      97s
+    ```
+    
+    **4. 인그레스로 접속(요청을 전달)**
+    
+    ```bash
+    vagrant@master-node:~$ kubectl get service -n ingress-nginx
+    NAME                                 TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+    ingress-nginx-controller             LoadBalancer   172.17.39.79    10.0.0.30     80:30253/TCP,443:32407/TCP   19h
+    ingress-nginx-controller-admission   ClusterIP      172.17.48.148   <none>        443/TCP                      19h
+    ```
+    
+    ```bash
+    sudo vi /etc/hosts
+    10.0.0.30 www.canary.com
+    
+    vagrant@master-node:~$ wget -q -O - http://www.canary.com
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <title>Welcome to nginx!</title>
+    <style>
+        body {
+            width: 35em;
+            margin: 0 auto;
+            font-family: Tahoma, Verdana, Arial, sans-serif;
+        }
+    </style>
+    </head>
+    <body>
+    <h1>Welcome to nginx!</h1>
+    <p>If you see this page, the nginx web server is successfully installed and
+    working. Further configuration is required.</p>
+    
+    <p>For online documentation and support please refer to
+    <a href="http://nginx.org/">nginx.org</a>.<br/>
+    Commercial support is available at
+    <a href="http://nginx.com/">nginx.com</a>.</p>
+    
+    <p><em>Thank you for using nginx.</em></p>
+    </body>
+    </html>
+    ```
+    
+    내 PC의 C:\Windows\System32\drivers\etc\hosts 파일에 10.0.0.30 www.canary.com 내용을 추가해서 테스트도 가능
+    
+    (메모장을 관리자 권한으로 실행해서 수정 후 저장)
+    
+    ![image](https://github.com/Suah-Cho/STUDY/assets/102336763/5bc3f700-02dd-4f88-a0ca-2a5ec94a1b88)
+
+    
+    **5. 새로운 버전의 디플로이먼트, 서비스를 생성**
+    
+    canary-deployment.yaml
+    
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: canary-deployment
+    spec:
+      replicas: 1				
+      selector:
+        matchLabels:
+          app: nginx-canary
+      template:
+        metadata:
+          labels:
+            app: nginx-canary
+        spec:
+          containers:
+          - name: nginx-canary
+            image: docker.io/alicek106/rr-test:echo-hostname
+            ports:
+            - containerPort: 80
+          imagePullSecrets:
+          - name: regcred
+    ```
+    
+    canary-service.yaml
+    
+    ```yaml
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: canary-service
+    spec:
+      tpye: ClusterIP
+      selector:
+        app: nginx-canary
+      ports:
+        - protocol: TCP
+          port: 80
+          targetPort: 80
+    ```
+    
+    ```bash
+    vagrant@master-node:~$ kubectl apply -f canary-deployment.yaml
+    deployment.apps/canary-deployment created
+    vagrant@master-node:~$ kubectl apply -f canary-service.yaml
+    service/canary-service created
+    vagrant@master-node:~$ kubectl get all
+    NAME                                         READY   STATUS    RESTARTS   AGE
+    pod/canary-deployment-76fb4d56cd-zk6kb       1/1     Running   0          19s
+    pod/production-deployment-768d775c57-7xghk   1/1     Running   0          43m
+    pod/production-deployment-768d775c57-vnmdr   1/1     Running   0          43m
+    pod/production-deployment-768d775c57-vxxqg   1/1     Running   0          43m
+    
+    NAME                         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+    service/canary-service       ClusterIP   172.17.42.132   <none>        80/TCP    12s
+    service/kubernetes           ClusterIP   172.17.0.1      <none>        443/TCP   6d3h
+    service/production-service   ClusterIP   172.17.20.176   <none>        80/TCP    43m
+    
+    NAME                                    READY   UP-TO-DATE   AVAILABLE   AGE
+    deployment.apps/canary-deployment       1/1     1            1           19s
+    deployment.apps/production-deployment   3/3     3            3           43m
+    
+    NAME                                               DESIRED   CURRENT   READY   AGE
+    replicaset.apps/canary-deployment-76fb4d56cd       1         1         1       19s
+    replicaset.apps/production-deployment-768d775c57   3         3         3       43m
+    ```
+    
+    production-deployment를 통해서 생성된 파드는 ingress를 통해서 외부에 노출되어 있으나, canary-deployment를 통해서 생성된 파드는 외부에서 접근할 수 없는 상태
+    
+    **6. 인그레스 추가**
+    
+    canary-ingress.yaml
+    
+    ```yaml
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: canary-ingress
+      annotations:
+        nginx.ingress.kubernetes.io/canary: "true"  << nginx의 canary를 사용하겠다.
+        nginx.ingress.kubernetes.io/canary-weight: "20"  << 아래 spec에 만족하는 서비스 쪽으로 이동하겠다.
+    spec:
+      ingressClassName: nginx
+      rules:
+      - host: www.canary.com
+        http:
+          paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: canary-service
+                port:
+                  number: 80
+    ```
+    
+    ```bash
+    vagrant@master-node:~$ kubectl apply -f canary-ingress.yaml
+    ingress.networking.k8s.io/canary-ingress created
+    
+    vagrant@master-node:~$ kubectl get ingress
+    NAME                 CLASS   HOSTS            ADDRESS     PORTS   AGE
+    canary-ingress       nginx   www.canary.com   10.0.0.12   80      18s
+    production-ingress   nginx   www.canary.com   10.0.0.12   80      49m
+    
+    vagrant@master-node:~$ kubectl get service -n ingress-nginx
+    NAME                                 TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+    ingress-nginx-controller             LoadBalancer   172.17.39.79    10.0.0.30     80:30253/TCP,443:32407/TCP   19h
+    ingress-nginx-controller-admission   ClusterIP      172.17.48.148   <none>        443/TCP                      19h
+    ```
+    
+    **7. [http://www.canary.com](http://www.canary.com요청을)으로 요청을 전달했을 때 요청이 분배되어 처리되는 것을 확인**
+    
+    ![image](https://github.com/Suah-Cho/STUDY/assets/102336763/b24754ff-3d3e-4377-92ae-6239d6e2c3b3)
+
+    
+    ![image](https://github.com/Suah-Cho/STUDY/assets/102336763/33cfb65b-4e0a-462d-86f2-1e5909a0b04a)
+
+    
+    **8. canary-ingress.yaml파일에 canary-weight를 변경**
+    
+    20 → 80으로 변경
+    
+    ```bash
+    vagrant@master-node:~$ kubectl apply -f canary-ingress.yaml
+    ingress.networking.k8s.io/canary-ingress configured
+    ```
+    
+    ![image](https://github.com/Suah-Cho/STUDY/assets/102336763/44c4ea7e-28bd-429e-b358-96dc95453d84)
+
+    
+    ![image](https://github.com/Suah-Cho/STUDY/assets/102336763/a7eb6e76-d27c-4c28-bb27-e4f9156e2bc0)
+
+    
+    **⇒ 신규 버전이 더 많이 응답하는 것을 볼 수 있다.**
 
 ### 데몬셋(DaemonSet)
 
