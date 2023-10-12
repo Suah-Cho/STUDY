@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whoami-flask-deployment
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: whoami-flask
+  template:
+    metadata:
+      name: whoami-flask-pod
+      labels:
+        app: whoami-flask
+    spec:
+      containers:
+      - name: whoami-flask-container
+        image: docker.io/suahcho/whoami-flask:v4
+        ports:
+        - containerPort: 5000
+      imagePullSecrets:
+      - name: regcred
