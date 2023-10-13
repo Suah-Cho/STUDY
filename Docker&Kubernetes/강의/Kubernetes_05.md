@@ -1,3 +1,4 @@
+# Kubernetes_05
 ## LoadBalancer 타입의 서비스
 
 일반적으로 온프레미스 환경에서는 NodePort 타입의 서비스를 사용하고, 퍼블릭 클라우드 환경에서는 LoadBalancer 타입의 서비스를 사용해서 애플리케이션을 외부에 노출
